@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>冷蔵庫メモ</title>
+
+<style>
+/* ====== RESET & BASE ====== */
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --primary: #3CB371;
+  --primary-dark: #2E8B57;
+  --primary-light: #E8F5EE;
+  --accent: #FF9500;
+  --danger: #FF3B30;
+  --bg: #F2F9F5;
+  --surface: #FFFFFF;
+  --text: #1C1C1E;
+  --text-sub: #6C6C70;
+  --border: #E5E5EA;
+  --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --header-h: 58px;
+  --nav-h: 58px;
+}
+
+html, body { height: 100%; overflow: hidden; background: var(--bg); }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', sans-serif;
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+.hidden { display: none !important; }
+
+button { font-family: inherit; }
+
+/* ====== SETUP SCREEN ====== */
+#setupScreen {
+  position: fixed; inset: 0; z-index: 100;
+  background: linear-gradient(160deg, #43C478 0%, #2E8B57 100%);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+
+.setup-card {
+  background: white; border-radius: 28px; padding: 44px 32px;
+  text-align: center; width: 100%; max-width: 360px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+}
+
+.setup-icon { font-size: 72px; margin-bottom: 16px; display: block; }
+.setup-card h1 { font-size: 26px; font-weight: 700; margin-bottom: 12px; }
+.setup-card p { color: var(--text-sub); font-size: 16px; line-height: 1.7; margin-bottom: 32px; }
+
+.setup-input {
+  width: 100%; padding: 16px; font-size: 18px; text-align: center;
+  border: 2px solid var(--border); border-radius: 14px;
+  outline: none; margin-bottom: 14px; font-family: inherit;
+  transition: border-color 0.2s;
+}
+.setup-input:focus { border-color: var(--primary); }
+
+.setup-hint { font-size: 13px; color: var(--text-sub); margin-bottom: 24px; }
+
+.setup-btn {
+  width: 100%; padding: 18px; font-size: 18px; font-weight: 700;
+  background: var(--primary); color: white; border: none;
+  border-radius: 14px; cursor: pointer; transition: background 0.15s;
+}
+.setup-btn:active { background: var(--primary-dark); }
+
+/* ====== MAIN APP LAYOUT ====== */
+#mainApp {
+  display: flex; flex-direction: column; height: 100%;
+}
+
+/* ====== HEADER ====== */
+header {
+  background: white;
+  padding: 0 16px;
+  padding-top: env(safe-area-inset-top);
+  height: calc(var(--header-h) + env(safe-area-inset-top));
+  display: flex; align-items: flex-end; justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.header-title { font-size: 20px; font-weight: 700; }
+
+.header-right { display: flex; gap: 8px; align-items: center; }
+
+.icon-btn {
+  width: 38px; height: 38px; border: none; background: var(--primary-light);
+  border-radius: 50%; cursor: pointer; font-size: 17px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.icon-btn:active { background: #C8E6C9; }
+
+/* ====== SEARCH BAR ====== */
+.search-bar {
+  background: white; padding: 10px 16px;
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.search-input {
+  width: 100%; padding: 11px 16px; font-size: 17px;
+  border: 1.5px solid var(--border); border-radius: 12px;
+  outline: none; font-family: inherit; background: var(--bg);
+  transition: border-color 0.2s;
+}
+.search-input:focus { border-color: var(--primary); }
+
+/* ====== CONTENT AREA ====== */
+#appContent { flex: 1; overflow: hidden; position: relative; }
+
+.tab-content {
+  display: none; height: 100%;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding-bottom: 32px;
+}
+.tab-content.active { display: block; }
+
+/* ====== CATEGORY FILTER ====== */
+.category-scroll {
+  display: flex; gap: 8px; padding: 12px 16px 10px;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; flex-shrink: 0;
+}
+.category-scroll::-webkit-scrollbar { display: none; }
+
+.cat-chip {
+  flex-shrink: 0; padding: 8px 16px; border-radius: 20px;
+  border: 1.5px solid var(--border); background: white;
+  font-size: 15px; font-weight: 500; cursor: pointer;
+  white-space: nowrap; color: var(--text);
+  transition: all 0.15s;
+}
+.cat-chip.active {
+  background: var(--primary); border-color: var(--primary); color: white;
+}
+
+/* ====== EXPIRY ALERT ====== */
+.expiry-alert {
+  margin: 0 16px 12px; padding: 14px 16px;
+  background: #FFF3E0; border-radius: var(--radius-sm);
+  border-left: 4px solid var(--accent);
+  font-size: 15px; color: #C07000; font-weight: 500; line-height: 1.5;
+}
+
+/* ====== ITEM LIST & CARDS ====== */
+.item-list { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
+
+.item-card {
+  background: white; border-radius: var(--radius);
+  box-shadow: var(--shadow); display: flex; align-items: center;
+  padding: 14px 12px; gap: 12px;
+  border: 1.5px solid transparent;
+}
+.item-card.card-expired { border-color: var(--danger); background: #FFF5F5; }
+.item-card.card-warn { border-color: #FFCC00; background: #FFFDF0; }
+
+.cat-emoji { font-size: 30px; flex-shrink: 0; width: 40px; text-align: center; }
+
+.card-body { flex: 1; min-width: 0; }
+.card-name { font-size: 19px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-meta { display: flex; align-items: center; gap: 6px; margin-top: 3px; flex-wrap: wrap; }
+.card-qty { font-size: 15px; color: var(--text-sub); }
+.card-cat { font-size: 13px; color: var(--text-sub); }
+
+.card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+
+.expiry-badge {
+  padding: 4px 10px; border-radius: 20px;
+  font-size: 13px; font-weight: 600; white-space: nowrap;
+}
+.badge-expired { background: #FFE5E5; color: var(--danger); }
+.badge-warn    { background: #FFF0CC; color: #B07000; }
+.badge-soon    { background: #FFF9D6; color: #8A7000; }
+.badge-ok      { background: var(--primary-light); color: var(--primary-dark); }
+
+.card-actions { display: flex; gap: 4px; }
+.action-btn {
+  width: 36px; height: 36px; border: none; background: var(--bg);
+  border-radius: 8px; cursor: pointer; font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.action-btn:active { background: #E0E0E0; }
+
+/* ====== EMPTY STATE ====== */
+.empty-state { text-align: center; padding: 64px 24px; color: var(--text-sub); }
+.empty-icon { font-size: 60px; margin-bottom: 16px; }
+.empty-text { font-size: 17px; line-height: 1.7; }
+
+/* ====== SHOPPING LIST ====== */
+.shopping-add {
+  display: flex; gap: 10px; padding: 12px 16px;
+  background: white; border-bottom: 1px solid var(--border);
+  flex-shrink: 0; position: sticky; top: 0; z-index: 2;
+}
+.shopping-text-input {
+  flex: 1; padding: 12px 14px; font-size: 17px;
+  border: 1.5px solid var(--border); border-radius: 12px;
+  outline: none; font-family: inherit; transition: border-color 0.2s;
+}
+.shopping-text-input:focus { border-color: var(--primary); }
+.shopping-add-btn {
+  padding: 12px 18px; background: var(--primary); color: white;
+  border: none; border-radius: 12px; font-size: 17px; font-weight: 600;
+  cursor: pointer; flex-shrink: 0; transition: background 0.15s;
+}
+.shopping-add-btn:active { background: var(--primary-dark); }
+
+.shopping-section { padding: 16px 16px 0; }
+.shopping-section-title { font-size: 13px; font-weight: 600; color: var(--text-sub); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.shopping-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px; background: white; border-radius: var(--radius-sm);
+  margin-bottom: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.shopping-check {
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 2px solid var(--border); background: white; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; flex-shrink: 0; transition: all 0.2s;
+}
+.shopping-check.checked { background: var(--primary); border-color: var(--primary); color: white; }
+.shopping-name { flex: 1; font-size: 18px; }
+.shopping-name.done { text-decoration: line-through; color: var(--text-sub); }
+.shopping-del { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-sub); padding: 4px 4px 4px 8px; }
+
+.shopping-clear-btn {
+  width: 100%; padding: 14px; margin-top: 12px;
+  border: 1.5px solid var(--border); border-radius: 12px;
+  background: white; font-size: 16px; color: var(--text-sub);
+  cursor: pointer; font-family: inherit;
+}
+
+/* ====== FAVORITES ====== */
+.favorites-hint {
+  padding: 12px 16px 4px; font-size: 14px; color: var(--text-sub);
+}
+.favorites-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 12px; padding: 12px 16px;
+}
+.favorite-card {
+  background: white; border-radius: var(--radius);
+  padding: 20px 12px 16px; text-align: center;
+  box-shadow: var(--shadow); cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  border: 1.5px solid transparent; position: relative;
+  transition: border-color 0.15s, transform 0.1s;
+}
+.favorite-card:active { border-color: var(--primary); transform: scale(0.97); }
+.fav-emoji { font-size: 38px; }
+.fav-name { font-size: 16px; font-weight: 600; color: var(--text); }
+.fav-meta { font-size: 13px; color: var(--text-sub); }
+.fav-del {
+  position: absolute; top: 8px; right: 8px;
+  background: var(--bg); border: none; width: 28px; height: 28px;
+  border-radius: 50%; cursor: pointer; font-size: 14px; color: var(--text-sub);
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ====== FAB ====== */
+.fab {
+  position: fixed; right: 20px;
+  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px);
+  width: 62px; height: 62px; border-radius: 50%;
+  background: var(--primary); color: white; border: none;
+  font-size: 34px; cursor: pointer; z-index: 10;
+  box-shadow: 0 4px 18px rgba(60, 179, 113, 0.45);
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.15s;
+  line-height: 1;
+  padding-bottom: 2px;
+}
+.fab:active { transform: scale(0.92); }
+
+/* ====== BOTTOM NAV ====== */
+.bottom-nav {
+  background: white; border-top: 1px solid var(--border);
+  display: flex;
+  padding-bottom: env(safe-area-inset-bottom);
+  height: calc(var(--nav-h) + env(safe-area-inset-bottom));
+  flex-shrink: 0; z-index: 10;
+}
+.nav-btn {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  border: none; background: none; cursor: pointer;
+  color: var(--text-sub); font-family: inherit;
+  padding: 6px 0; gap: 3px; transition: color 0.15s;
+}
+.nav-btn.active { color: var(--primary); }
+.nav-icon { font-size: 24px; }
+.nav-label { font-size: 11px; font-weight: 500; }
+
+/* ====== MODAL ====== */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(0,0,0,0.35);
+  display: flex; align-items: flex-end;
+}
+.modal-sheet {
+  background: white; border-radius: 24px 24px 0 0;
+  width: 100%; max-height: 93vh;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding-bottom: env(safe-area-inset-bottom);
+  animation: slideUp 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.modal-handle {
+  width: 40px; height: 5px; background: var(--border);
+  border-radius: 3px; margin: 14px auto 0;
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px 4px;
+}
+.modal-title { font-size: 20px; font-weight: 700; }
+.modal-close {
+  width: 32px; height: 32px; border: none; background: var(--bg);
+  border-radius: 50%; cursor: pointer; font-size: 16px; color: var(--text-sub);
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 22px; }
+.modal-footer { padding: 4px 20px 20px; }
+
+/* Form elements */
+.form-label { font-size: 15px; font-weight: 600; color: var(--text-sub); margin-bottom: 8px; display: block; }
+
+.text-input {
+  width: 100%; padding: 15px; font-size: 18px;
+  border: 1.5px solid var(--border); border-radius: 12px;
+  outline: none; font-family: inherit; transition: border-color 0.2s;
+}
+.text-input:focus { border-color: var(--primary); }
+
+.input-with-voice { display: flex; gap: 10px; }
+.input-with-voice .text-input { flex: 1; }
+
+.voice-btn {
+  width: 54px; height: 54px; border-radius: 12px;
+  border: 1.5px solid var(--border); background: white;
+  font-size: 24px; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.voice-btn.recording {
+  background: #FFE5E5; border-color: var(--danger);
+  animation: pulse 1s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+
+.cat-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+}
+.cat-grid-btn {
+  padding: 10px 4px; border-radius: 10px;
+  border: 1.5px solid var(--border); background: white;
+  font-size: 13px; cursor: pointer; text-align: center;
+  font-family: inherit; color: var(--text);
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  transition: all 0.15s;
+}
+.cat-g-emoji { font-size: 22px; }
+.cat-grid-btn.selected {
+  background: var(--primary-light); border-color: var(--primary);
+  color: var(--primary-dark); font-weight: 600;
+}
+
+.qty-row { display: flex; align-items: center; gap: 10px; }
+.qty-btn {
+  width: 46px; height: 46px; border-radius: 50%;
+  border: 1.5px solid var(--border); background: white;
+  font-size: 24px; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.qty-btn:active { background: var(--bg); }
+.qty-input {
+  width: 64px; text-align: center; padding: 10px;
+  font-size: 22px; font-weight: 600;
+  border: 1.5px solid var(--border); border-radius: 10px;
+  outline: none; font-family: inherit;
+}
+.unit-select {
+  flex: 1; padding: 13px 10px; font-size: 17px;
+  border: 1.5px solid var(--border); border-radius: 10px;
+  outline: none; background: white; font-family: inherit;
+}
+
+.date-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.date-chip {
+  padding: 9px 16px; border-radius: 20px;
+  border: 1.5px solid var(--border); background: white;
+  font-size: 15px; cursor: pointer; font-family: inherit; color: var(--text);
+  transition: all 0.15s;
+}
+.date-chip.selected { background: var(--primary); border-color: var(--primary); color: white; }
+
+.date-input {
+  width: 100%; padding: 15px; font-size: 17px;
+  border: 1.5px solid var(--border); border-radius: 12px;
+  outline: none; font-family: inherit; transition: border-color 0.2s;
+}
+.date-input:focus { border-color: var(--primary); }
+
+.toggle-row {
+  display: flex; align-items: center; justify-content: space-between; padding: 2px 0;
+}
+.toggle-label-text { font-size: 17px; }
+.ios-toggle { position: relative; width: 51px; height: 31px; flex-shrink: 0; }
+.ios-toggle input { opacity: 0; width: 0; height: 0; }
+.ios-slider {
+  position: absolute; inset: 0; background: #E5E5EA;
+  border-radius: 15.5px; cursor: pointer; transition: background 0.2s;
+}
+.ios-slider::before {
+  content: ''; position: absolute;
+  height: 27px; width: 27px; left: 2px; bottom: 2px;
+  background: white; border-radius: 50%;
+  transition: transform 0.2s;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.22);
+}
+.ios-toggle input:checked + .ios-slider { background: var(--primary); }
+.ios-toggle input:checked + .ios-slider::before { transform: translateX(20px); }
+
+.save-btn {
+  width: 100%; padding: 18px; font-size: 18px; font-weight: 700;
+  background: var(--primary); color: white; border: none;
+  border-radius: 16px; cursor: pointer; transition: background 0.15s;
+}
+.save-btn:active { background: var(--primary-dark); }
+
+/* ====== CONFIRM DIALOG ====== */
+.confirm-overlay {
+  position: fixed; inset: 0; z-index: 60;
+  background: rgba(0,0,0,0.35);
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.confirm-box {
+  background: white; border-radius: 20px;
+  padding: 28px 24px; width: 100%; max-width: 320px; text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+.confirm-title { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+.confirm-msg { font-size: 16px; color: var(--text-sub); margin-bottom: 28px; line-height: 1.6; }
+.confirm-btns { display: flex; gap: 12px; }
+.confirm-cancel {
+  flex: 1; padding: 15px; border-radius: 12px;
+  border: 1.5px solid var(--border); background: white;
+  font-size: 17px; cursor: pointer; font-family: inherit;
+}
+.confirm-ok {
+  flex: 1; padding: 15px; border-radius: 12px;
+  border: none; background: var(--danger); color: white;
+  font-size: 17px; font-weight: 600; cursor: pointer; font-family: inherit;
+}
+
+/* ====== TOAST ====== */
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px);
+  background: rgba(30,30,30,0.88); color: white;
+  padding: 13px 22px; border-radius: 22px;
+  font-size: 15px; z-index: 70; white-space: nowrap;
+  animation: toastIn 0.25s ease;
+  backdrop-filter: blur(8px);
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ====== SETUP SCREEN ====== -->
+  <div id="setupScreen">
+    <div class="setup-card">
+      <span class="setup-icon">🧊</span>
+      <h1>冷蔵庫メモ</h1>
+      <p>家族で共有するための<br>合言葉を決めてください</p>
+      <input type="text" id="familyCodeInput" class="setup-input"
+        placeholder="例：yamada-fridge-2024"
+        maxlength="30" autocomplete="off" autocorrect="off" autocapitalize="off">
+      <p class="setup-hint">家族みんなが同じ合言葉を入力すると<br>データが共有されます</p>
+      <button id="startBtn" class="setup-btn">はじめる →</button>
+    </div>
+  </div>
+
+  <!-- ====== MAIN APP ====== -->
+  <div id="mainApp" class="hidden">
+
+    <!-- Header -->
+    <header>
+      <span class="header-title">🧊 冷蔵庫メモ</span>
+      <div class="header-right">
+        <button class="icon-btn" id="searchToggleBtn">🔍</button>
+        <button class="icon-btn" id="settingsBtn" title="設定">⚙️</button>
+      </div>
+    </header>
+
+    <!-- Search Bar -->
+    <div id="searchBar" class="search-bar hidden">
+      <input type="text" id="searchInput" class="search-input" placeholder="食材を検索...">
+    </div>
+
+    <!-- Tab Contents -->
+    <div id="appContent">
+
+      <!-- 🧊 Fridge Tab -->
+      <div id="tabFridge" class="tab-content active">
+        <div class="category-scroll" id="categoryFilter"></div>
+        <div id="expiryAlert" class="expiry-alert hidden"></div>
+        <div id="fridgeList" class="item-list"></div>
+        <div id="fridgeEmpty" class="empty-state hidden">
+          <div class="empty-icon">🧊</div>
+          <p class="empty-text">食材を追加しましょう<br>右下の <strong>＋</strong> をタップ</p>
+        </div>
+      </div>
+
+      <!-- 🛒 Shopping Tab -->
+      <div id="tabShopping" class="tab-content">
+        <div class="shopping-add">
+          <input type="text" id="shoppingInput" class="shopping-text-input" placeholder="買うものを入力...">
+          <button id="shoppingAddBtn" class="shopping-add-btn">追加</button>
+        </div>
+        <div id="shoppingList" style="padding: 12px 16px 0;"></div>
+        <div id="shoppingEmpty" class="empty-state hidden">
+          <div class="empty-icon">🛒</div>
+          <p class="empty-text">買い物リストは空です<br>冷蔵庫の 🛒 ボタンから追加できます</p>
+        </div>
+      </div>
+
+      <!-- ⭐ Favorites Tab -->
+      <div id="tabFavorites" class="tab-content">
+        <p class="favorites-hint">タップすると冷蔵庫への追加画面が開きます</p>
+        <div id="favoritesList" class="favorites-grid"></div>
+        <div id="favoritesEmpty" class="empty-state hidden">
+          <div class="empty-icon">⭐</div>
+          <p class="empty-text">食材を追加するときに<br>「よく使う」をオンにすると<br>ここに表示されます</p>
+        </div>
+      </div>
+
+    </div><!-- /appContent -->
+
+    <!-- FAB -->
+    <button class="fab" id="fabBtn">＋</button>
+
+    <!-- Bottom Nav -->
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-tab="fridge">
+        <span class="nav-icon">🧊</span>
+        <span class="nav-label">冷蔵庫</span>
+      </button>
+      <button class="nav-btn" data-tab="shopping">
+        <span class="nav-icon">🛒</span>
+        <span class="nav-label">買い物</span>
+      </button>
+      <button class="nav-btn" data-tab="favorites">
+        <span class="nav-icon">⭐</span>
+        <span class="nav-label">よく使う</span>
+      </button>
+    </nav>
+
+  </div><!-- /mainApp -->
+
+  <!-- ====== ADD / EDIT MODAL ====== -->
+  <div id="modal" class="modal-overlay hidden">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <span class="modal-title" id="modalTitle">食材を追加</span>
+        <button class="modal-close" id="modalCloseBtn">✕</button>
+      </div>
+      <div class="modal-body">
+
+        <!-- Name -->
+        <div>
+          <label class="form-label">食材名</label>
+          <div class="input-with-voice">
+            <input type="text" id="itemName" class="text-input"
+              placeholder="例：キャベツ" autocomplete="off" autocorrect="off">
+            <button class="voice-btn" id="voiceBtn" title="音声で入力">🎤</button>
+          </div>
+        </div>
+
+        <!-- Category -->
+        <div>
+          <label class="form-label">カテゴリ</label>
+          <div class="cat-grid" id="catGrid"></div>
+        </div>
+
+        <!-- Quantity -->
+        <div>
+          <label class="form-label">数量</label>
+          <div class="qty-row">
+            <button class="qty-btn" id="qtyMinus">−</button>
+            <input type="number" id="itemQty" class="qty-input" value="1" min="1" max="99">
+            <button class="qty-btn" id="qtyPlus">＋</button>
+            <select id="itemUnit" class="unit-select">
+              <option>個</option><option>本</option><option>袋</option>
+              <option>パック</option><option>枚</option><option>束</option>
+              <option>箱</option><option>缶</option><option>g</option>
+              <option>kg</option><option>ml</option><option>L</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Expiry Date -->
+        <div>
+          <label class="form-label">消費期限（任意）</label>
+          <div class="date-chips" id="dateChips">
+            <button class="date-chip selected" data-days="-1">なし</button>
+            <button class="date-chip" data-days="0">今日</button>
+            <button class="date-chip" data-days="3">3日後</button>
+            <button class="date-chip" data-days="7">1週間後</button>
+            <button class="date-chip" data-days="14">2週間後</button>
+            <button class="date-chip" data-days="30">1ヶ月後</button>
+          </div>
+          <input type="date" id="itemExpiry" class="date-input">
+        </div>
+
+        <!-- Toggles -->
+        <div>
+          <div class="toggle-row">
+            <span class="toggle-label-text">⭐ よく使う食材に登録</span>
+            <label class="ios-toggle">
+              <input type="checkbox" id="itemFavorite">
+              <span class="ios-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div>
+          <div class="toggle-row">
+            <span class="toggle-label-text">🛒 買い物リストにも追加</span>
+            <label class="ios-toggle">
+              <input type="checkbox" id="itemShopping">
+              <span class="ios-slider"></span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="save-btn" id="saveItemBtn">保存する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== CONFIRM DIALOG ====== -->
+  <div id="confirmDialog" class="confirm-overlay hidden">
+    <div class="confirm-box">
+      <div class="confirm-title" id="confirmTitle">削除しますか？</div>
+      <div class="confirm-msg" id="confirmMsg"></div>
+      <div class="confirm-btns">
+        <button class="confirm-cancel" id="confirmCancel">キャンセル</button>
+        <button class="confirm-ok" id="confirmOk">削除する</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- Firebase SDK (Compat) -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+<script>
+// ================================================================
+// 【ここにFirebaseの設定を貼り付けてください】
+// Firebase Console > プロジェクトの設定 > マイアプリ > firebaseConfig
+// ================================================================
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyDArW8YOn0sBsu03g-QP7Ah0Bv-hQX8PyA",
+  authDomain:        "fridge-memo-9b7c6.firebaseapp.com",
+  projectId:         "fridge-memo-9b7c6",
+  storageBucket:     "fridge-memo-9b7c6.firebasestorage.app",
+  messagingSenderId: "156452101360",
+  appId:             "1:156452101360:web:f4f1588299251d229b7635"
+};
+
+// ================================================================
+// カテゴリ定義
+// ================================================================
+const CATEGORIES = [
+  { id: '野菜・果物', emoji: '🥦', label: '野菜・果物' },
+  { id: '肉・魚',    emoji: '🥩', label: '肉・魚'    },
+  { id: '乳製品・卵', emoji: '🥚', label: '乳製品・卵' },
+  { id: '飲み物',    emoji: '🥤', label: '飲み物'    },
+  { id: '調味料',    emoji: '🧂', label: '調味料'    },
+  { id: '冷凍食品',  emoji: '❄️', label: '冷凍食品'  },
+  { id: 'パン・麺',  emoji: '🍞', label: 'パン・麺'  },
+  { id: 'その他',    emoji: '📦', label: 'その他'    },
+];
+
+// ================================================================
+// STATE
+// ================================================================
+let db;
+let familyCode   = '';
+let fridgeItems  = [];
+let shoppingItems = [];
+let favoritesData = [];
+let activeTab      = 'fridge';
+let activeCategory = 'all';
+let editingItemId  = null;
+let selectedCat    = '';
+let recognition    = null;
+let unsubFridge, unsubShopping, unsubFavorites;
+
+// ================================================================
+// FIREBASE INIT
+// ================================================================
+firebase.initializeApp(FIREBASE_CONFIG);
+db = firebase.firestore();
+db.enablePersistence().catch(() => {/* offline persistence unavailable */});
+
+function col(name) {
+  return db.collection(`families/${familyCode}/${name}`);
+}
+
+// ================================================================
+// STARTUP
+// ================================================================
+function init() {
+  familyCode = localStorage.getItem('fridgeMemo_code') || '';
+  buildCategoryUI();
+  bindAllEvents();
+
+  if (familyCode) {
+    startApp();
+  } else {
+    document.getElementById('setupScreen').classList.remove('hidden');
+  }
+}
+
+function startApp() {
+  document.getElementById('setupScreen').classList.add('hidden');
+  document.getElementById('mainApp').classList.remove('hidden');
+  subscribeAll();
+}
+
+// ================================================================
+// FIRESTORE LISTENERS
+// ================================================================
+function subscribeAll() {
+  if (unsubFridge)    unsubFridge();
+  if (unsubShopping)  unsubShopping();
+  if (unsubFavorites) unsubFavorites();
+
+  unsubFridge = col('items').onSnapshot(snap => {
+    fridgeItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // Sort: items with expiry date first (soonest), then no-expiry items
+    fridgeItems.sort((a, b) => {
+      const aE = a.expiryDate ? a.expiryDate.seconds : Infinity;
+      const bE = b.expiryDate ? b.expiryDate.seconds : Infinity;
+      return aE - bE;
+    });
+    renderFridge();
+    renderExpiryAlert();
+  });
+
+  unsubShopping = col('shopping').orderBy('addedAt', 'asc').onSnapshot(snap => {
+    shoppingItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderShopping();
+  });
+
+  unsubFavorites = col('favorites').onSnapshot(snap => {
+    favoritesData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    favoritesData.sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+    renderFavorites();
+  });
+}
+
+// ================================================================
+// BUILD STATIC UI
+// ================================================================
+function buildCategoryUI() {
+  // Category filter chips
+  document.getElementById('categoryFilter').innerHTML =
+    `<button class="cat-chip active" data-cat="all">全部</button>` +
+    CATEGORIES.map(c =>
+      `<button class="cat-chip" data-cat="${c.id}">${c.emoji} ${c.label}</button>`
+    ).join('');
+
+  // Category grid in modal
+  document.getElementById('catGrid').innerHTML = CATEGORIES.map(c => `
+    <button class="cat-grid-btn" data-cat="${c.id}">
+      <span class="cat-g-emoji">${c.emoji}</span>
+      <span>${c.label}</span>
+    </button>
+  `).join('');
+
+  document.getElementById('catGrid').addEventListener('click', e => {
+    const btn = e.target.closest('.cat-grid-btn');
+    if (!btn) return;
+    selectedCat = btn.dataset.cat;
+    document.querySelectorAll('.cat-grid-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+  });
+}
+
+// ================================================================
+// RENDER: FRIDGE
+// ================================================================
+function getCategoryEmoji(cat) {
+  return (CATEGORIES.find(c => c.id === cat) || CATEGORIES[7]).emoji;
+}
+
+function getExpiryInfo(item) {
+  if (!item.expiryDate) return { label: '', cls: '', cardCls: '' };
+  const exp = new Date(item.expiryDate.seconds * 1000);
+  exp.setHours(23, 59, 59, 999);
+  const days = Math.ceil((exp - new Date()) / 86400000);
+
+  if (days < 0)  return { label: '期限切れ', cls: 'badge-expired', cardCls: 'card-expired' };
+  if (days === 0) return { label: '今日まで',  cls: 'badge-warn',    cardCls: 'card-warn'    };
+  if (days <= 3)  return { label: `あと${days}日`, cls: 'badge-warn', cardCls: 'card-warn'   };
+  if (days <= 7)  return { label: `あと${days}日`, cls: 'badge-soon', cardCls: ''            };
+  return               { label: `あと${days}日`, cls: 'badge-ok',   cardCls: ''            };
+}
+
+function renderFridge() {
+  const query = (document.getElementById('searchInput').value || '').toLowerCase();
+  let items = fridgeItems;
+  if (activeCategory !== 'all') items = items.filter(i => i.category === activeCategory);
+  if (query) items = items.filter(i => i.name.toLowerCase().includes(query));
+
+  const list  = document.getElementById('fridgeList');
+  const empty = document.getElementById('fridgeEmpty');
+
+  if (items.length === 0) {
+    list.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+
+  list.innerHTML = items.map(item => {
+    const exp   = getExpiryInfo(item);
+    const emoji = getCategoryEmoji(item.category);
+    return `
+      <div class="item-card ${exp.cardCls}">
+        <span class="cat-emoji">${emoji}</span>
+        <div class="card-body">
+          <div class="card-name">${esc(item.name)}</div>
+          <div class="card-meta">
+            <span class="card-qty">${item.quantity}${item.unit}</span>
+            ${item.category ? `<span class="card-cat">・${esc(item.category)}</span>` : ''}
+          </div>
+        </div>
+        <div class="card-right">
+          ${exp.label ? `<span class="expiry-badge ${exp.cls}">${exp.label}</span>` : ''}
+          <div class="card-actions">
+            <button class="action-btn" onclick="addToShoppingFromFridge('${item.id}')" title="買い物リストへ">🛒</button>
+            <button class="action-btn" onclick="openEditModal('${item.id}')" title="編集">✏️</button>
+            <button class="action-btn" onclick="confirmDeleteItem('${item.id}')" title="削除">🗑️</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderExpiryAlert() {
+  const el = document.getElementById('expiryAlert');
+  const expiring = fridgeItems.filter(item => {
+    if (!item.expiryDate) return false;
+    const exp = new Date(item.expiryDate.seconds * 1000);
+    exp.setHours(23, 59, 59, 999);
+    return Math.ceil((exp - new Date()) / 86400000) <= 3;
+  });
+
+  if (expiring.length === 0) { el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  const names = expiring.slice(0, 3).map(i => i.name).join('、');
+  el.textContent = `⚠️ もうすぐ期限：${names}${expiring.length > 3 ? `など ${expiring.length}件` : ''}`;
+}
+
+// ================================================================
+// RENDER: SHOPPING
+// ================================================================
+function renderShopping() {
+  const list  = document.getElementById('shoppingList');
+  const empty = document.getElementById('shoppingEmpty');
+
+  if (shoppingItems.length === 0) {
+    list.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+
+  const pending = shoppingItems.filter(i => !i.checked);
+  const done    = shoppingItems.filter(i => i.checked);
+
+  let html = '';
+  if (pending.length > 0) {
+    html += pending.map(item => shoppingItemHTML(item)).join('');
+  }
+  if (done.length > 0) {
+    html += `<div class="shopping-section"><div class="shopping-section-title">購入済み (${done.length})</div></div>`;
+    html += done.map(item => shoppingItemHTML(item)).join('');
+    html += `<button class="shopping-clear-btn" onclick="clearDoneShopping()">購入済みをクリア</button>`;
+  }
+  list.innerHTML = html;
+}
+
+function shoppingItemHTML(item) {
+  return `
+    <div class="shopping-item">
+      <button class="shopping-check ${item.checked ? 'checked' : ''}"
+        onclick="toggleShoppingCheck('${item.id}', ${item.checked})">
+        ${item.checked ? '✓' : ''}
+      </button>
+      <span class="shopping-name ${item.checked ? 'done' : ''}">${esc(item.name)}</span>
+      <button class="shopping-del" onclick="deleteShoppingItem('${item.id}')">✕</button>
+    </div>`;
+}
+
+// ================================================================
+// RENDER: FAVORITES
+// ================================================================
+function renderFavorites() {
+  const list  = document.getElementById('favoritesList');
+  const empty = document.getElementById('favoritesEmpty');
+
+  if (favoritesData.length === 0) {
+    list.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+
+  list.innerHTML = favoritesData.map(fav => `
+    <div class="favorite-card" onclick="openModalFromFavorite('${fav.id}')">
+      <span class="fav-emoji">${getCategoryEmoji(fav.category)}</span>
+      <span class="fav-name">${esc(fav.name)}</span>
+      <span class="fav-meta">${fav.defaultQuantity}${fav.unit}</span>
+      <button class="fav-del" onclick="confirmDeleteFavorite(event,'${fav.id}')">✕</button>
+    </div>
+  `).join('');
+}
+
+// ================================================================
+// MODAL
+// ================================================================
+function resetModal() {
+  document.getElementById('itemName').value = '';
+  document.getElementById('itemQty').value  = '1';
+  document.getElementById('itemUnit').value = '個';
+  document.getElementById('itemExpiry').value = '';
+  document.getElementById('itemFavorite').checked = false;
+  document.getElementById('itemShopping').checked = false;
+  selectedCat = '';
+  document.querySelectorAll('.cat-grid-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.date-chip').forEach(b => b.classList.remove('selected'));
+  document.querySelector('.date-chip[data-days="-1"]').classList.add('selected');
+}
+
+function openAddModal() {
+  editingItemId = null;
+  document.getElementById('modalTitle').textContent = '食材を追加';
+  resetModal();
+  document.getElementById('modal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('itemName').focus(), 350);
+}
+
+function openEditModal(itemId) {
+  const item = fridgeItems.find(i => i.id === itemId);
+  if (!item) return;
+
+  editingItemId = itemId;
+  document.getElementById('modalTitle').textContent = '食材を編集';
+  resetModal();
+
+  document.getElementById('itemName').value = item.name;
+  document.getElementById('itemQty').value  = item.quantity;
+  document.getElementById('itemUnit').value = item.unit;
+  selectedCat = item.category || '';
+  document.querySelectorAll('.cat-grid-btn').forEach(b =>
+    b.classList.toggle('selected', b.dataset.cat === selectedCat));
+
+  if (item.expiryDate) {
+    const d = new Date(item.expiryDate.seconds * 1000);
+    document.getElementById('itemExpiry').value = d.toISOString().split('T')[0];
+    document.querySelector('.date-chip[data-days="-1"]').classList.remove('selected');
+  }
+
+  document.getElementById('modal').classList.remove('hidden');
+}
+
+function openModalFromFavorite(favId) {
+  const fav = favoritesData.find(f => f.id === favId);
+  if (!fav) return;
+
+  editingItemId = null;
+  document.getElementById('modalTitle').textContent = '冷蔵庫に追加';
+  resetModal();
+
+  document.getElementById('itemName').value = fav.name;
+  document.getElementById('itemQty').value  = fav.defaultQuantity;
+  document.getElementById('itemUnit').value = fav.unit;
+  selectedCat = fav.category || '';
+  document.querySelectorAll('.cat-grid-btn').forEach(b =>
+    b.classList.toggle('selected', b.dataset.cat === selectedCat));
+
+  document.getElementById('modal').classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.add('hidden');
+  stopVoice();
+}
+
+async function saveItem() {
+  const name = document.getElementById('itemName').value.trim();
+  if (!name) {
+    showToast('食材名を入力してください');
+    document.getElementById('itemName').focus();
+    return;
+  }
+
+  const expiryVal = document.getElementById('itemExpiry').value;
+  const expiryDate = expiryVal
+    ? firebase.firestore.Timestamp.fromDate(new Date(expiryVal + 'T00:00:00'))
+    : null;
+
+  const data = {
+    name,
+    category:  selectedCat || 'その他',
+    quantity:  Math.max(1, parseInt(document.getElementById('itemQty').value) || 1),
+    unit:      document.getElementById('itemUnit').value,
+    expiryDate,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  };
+
+  const toFavorite = document.getElementById('itemFavorite').checked;
+  const toShopping = document.getElementById('itemShopping').checked;
+
+  try {
+    if (editingItemId) {
+      await col('items').doc(editingItemId).update(data);
+      showToast('更新しました ✓');
+    } else {
+      data.addedAt = firebase.firestore.FieldValue.serverTimestamp();
+      await col('items').add(data);
+      showToast('追加しました ✓');
+    }
+
+    if (toFavorite && !favoritesData.find(f => f.name === name)) {
+      await col('favorites').add({
+        name: data.name, category: data.category,
+        defaultQuantity: data.quantity, unit: data.unit,
+      });
+    }
+
+    if (toShopping) {
+      await col('shopping').add({
+        name: data.name, checked: false,
+        addedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+
+    closeModal();
+  } catch (e) {
+    console.error(e);
+    showToast('保存に失敗しました');
+  }
+}
+
+// ================================================================
+// ITEM ACTIONS
+// ================================================================
+async function addToShoppingFromFridge(itemId) {
+  const item = fridgeItems.find(i => i.id === itemId);
+  if (!item) return;
+  if (shoppingItems.find(i => i.name === item.name && !i.checked)) {
+    showToast('すでにリストにあります');
+    return;
+  }
+  await col('shopping').add({
+    name: item.name, checked: false,
+    addedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  showToast(`「${item.name}」を買い物リストに追加しました`);
+}
+
+function confirmDeleteItem(itemId) {
+  const item = fridgeItems.find(i => i.id === itemId);
+  if (!item) return;
+  showConfirm(`「${item.name}」を削除しますか？`, async () => {
+    await col('items').doc(itemId).delete();
+    showToast('削除しました');
+  });
+}
+
+async function toggleShoppingCheck(itemId, current) {
+  await col('shopping').doc(itemId).update({ checked: !current });
+}
+
+async function deleteShoppingItem(itemId) {
+  await col('shopping').doc(itemId).delete();
+}
+
+async function clearDoneShopping() {
+  const done = shoppingItems.filter(i => i.checked);
+  const batch = db.batch();
+  done.forEach(i => batch.delete(col('shopping').doc(i.id)));
+  await batch.commit();
+  showToast('購入済みをクリアしました');
+}
+
+async function addShoppingItem() {
+  const input = document.getElementById('shoppingInput');
+  const name  = input.value.trim();
+  if (!name) return;
+  await col('shopping').add({
+    name, checked: false,
+    addedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  input.value = '';
+}
+
+function confirmDeleteFavorite(e, favId) {
+  e.stopPropagation();
+  const fav = favoritesData.find(f => f.id === favId);
+  if (!fav) return;
+  showConfirm(`「${fav.name}」をよく使うから削除しますか？`, async () => {
+    await col('favorites').doc(favId).delete();
+    showToast('削除しました');
+  });
+}
+
+// ================================================================
+// CONFIRM DIALOG
+// ================================================================
+function showConfirm(msg, onOk) {
+  document.getElementById('confirmMsg').textContent = msg;
+  document.getElementById('confirmOk').onclick = () => {
+    document.getElementById('confirmDialog').classList.add('hidden');
+    onOk();
+  };
+  document.getElementById('confirmDialog').classList.remove('hidden');
+}
+
+// ================================================================
+// VOICE INPUT
+// ================================================================
+function initVoice() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    document.getElementById('voiceBtn').style.display = 'none';
+    return;
+  }
+  recognition = new SR();
+  recognition.lang = 'ja-JP';
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  recognition.onresult = e => {
+    document.getElementById('itemName').value = e.results[0][0].transcript;
+    document.getElementById('voiceBtn').classList.remove('recording');
+  };
+  recognition.onerror = () => {
+    document.getElementById('voiceBtn').classList.remove('recording');
+    showToast('音声認識に失敗しました');
+  };
+  recognition.onend = () => {
+    document.getElementById('voiceBtn').classList.remove('recording');
+  };
+}
+
+function toggleVoice() {
+  if (!recognition) return;
+  const btn = document.getElementById('voiceBtn');
+  if (btn.classList.contains('recording')) {
+    stopVoice();
+  } else {
+    recognition.start();
+    btn.classList.add('recording');
+    showToast('話しかけてください...');
+  }
+}
+
+function stopVoice() {
+  if (recognition) {
+    try { recognition.stop(); } catch(e) {}
+  }
+  document.getElementById('voiceBtn')?.classList.remove('recording');
+}
+
+// ================================================================
+// EVENTS
+// ================================================================
+function bindAllEvents() {
+
+  // Setup
+  document.getElementById('startBtn').addEventListener('click', () => {
+    const code = document.getElementById('familyCodeInput').value.trim();
+    if (!code) { showToast('合言葉を入力してください'); return; }
+    familyCode = code;
+    localStorage.setItem('fridgeMemo_code', code);
+    startApp();
+  });
+  document.getElementById('familyCodeInput').addEventListener('keypress', e => {
+    if (e.key === 'Enter') document.getElementById('startBtn').click();
+  });
+
+  // Settings (合言葉変更)
+  document.getElementById('settingsBtn').addEventListener('click', () => {
+    showConfirmCustom('合言葉を変更しますか？\n変更すると別のデータになります。', '変更する', () => {
+      localStorage.removeItem('fridgeMemo_code');
+      if (unsubFridge)    unsubFridge();
+      if (unsubShopping)  unsubShopping();
+      if (unsubFavorites) unsubFavorites();
+      document.getElementById('mainApp').classList.add('hidden');
+      document.getElementById('familyCodeInput').value = '';
+      document.getElementById('setupScreen').classList.remove('hidden');
+    });
+  });
+
+  // Search
+  document.getElementById('searchToggleBtn').addEventListener('click', () => {
+    const bar = document.getElementById('searchBar');
+    bar.classList.toggle('hidden');
+    if (!bar.classList.contains('hidden')) document.getElementById('searchInput').focus();
+    else { document.getElementById('searchInput').value = ''; renderFridge(); }
+  });
+  document.getElementById('searchInput').addEventListener('input', renderFridge);
+
+  // Category filter
+  document.getElementById('categoryFilter').addEventListener('click', e => {
+    const btn = e.target.closest('.cat-chip');
+    if (!btn) return;
+    document.querySelectorAll('.cat-chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeCategory = btn.dataset.cat;
+    renderFridge();
+  });
+
+  // Tab nav
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab;
+      activeTab = tab;
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      const key = tab.charAt(0).toUpperCase() + tab.slice(1);
+      document.getElementById(`tab${key}`).classList.add('active');
+    });
+  });
+
+  // FAB
+  document.getElementById('fabBtn').addEventListener('click', openAddModal);
+
+  // Modal backdrop
+  document.getElementById('modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('modal')) closeModal();
+  });
+  document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+  document.getElementById('saveItemBtn').addEventListener('click', saveItem);
+
+  // Qty
+  document.getElementById('qtyMinus').addEventListener('click', () => {
+    const el = document.getElementById('itemQty');
+    if (parseInt(el.value) > 1) el.value = parseInt(el.value) - 1;
+  });
+  document.getElementById('qtyPlus').addEventListener('click', () => {
+    const el = document.getElementById('itemQty');
+    if (parseInt(el.value) < 99) el.value = parseInt(el.value) + 1;
+  });
+
+  // Date chips
+  document.getElementById('dateChips').addEventListener('click', e => {
+    const btn = e.target.closest('.date-chip');
+    if (!btn) return;
+    document.querySelectorAll('.date-chip').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    const days = parseInt(btn.dataset.days);
+    if (days === -1) {
+      document.getElementById('itemExpiry').value = '';
+    } else {
+      const d = new Date();
+      d.setDate(d.getDate() + days);
+      document.getElementById('itemExpiry').value = d.toISOString().split('T')[0];
+    }
+  });
+  document.getElementById('itemExpiry').addEventListener('change', () => {
+    document.querySelectorAll('.date-chip').forEach(b => b.classList.remove('selected'));
+  });
+
+  // Voice
+  document.getElementById('voiceBtn').addEventListener('click', toggleVoice);
+
+  // Shopping
+  document.getElementById('shoppingAddBtn').addEventListener('click', addShoppingItem);
+  document.getElementById('shoppingInput').addEventListener('keypress', e => {
+    if (e.key === 'Enter') addShoppingItem();
+  });
+
+  // Confirm
+  document.getElementById('confirmCancel').addEventListener('click', () => {
+    document.getElementById('confirmDialog').classList.add('hidden');
+  });
+}
+
+// ================================================================
+// CONFIRM (custom button label)
+// ================================================================
+function showConfirmCustom(msg, okLabel, onOk) {
+  document.getElementById('confirmMsg').textContent = msg;
+  document.getElementById('confirmOk').textContent  = okLabel;
+  document.getElementById('confirmOk').onclick = () => {
+    document.getElementById('confirmDialog').classList.add('hidden');
+    onOk();
+  };
+  document.getElementById('confirmDialog').classList.remove('hidden');
+}
+
+// ================================================================
+// UTILITIES
+// ================================================================
+function esc(str) {
+  return String(str ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function showToast(msg) {
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2800);
+}
+
+// ================================================================
+// START
+// ================================================================
+window.addEventListener('DOMContentLoaded', () => {
+  init();
+  initVoice();
+});
+</script>
+</body>
+</html>
